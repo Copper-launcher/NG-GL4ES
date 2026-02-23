@@ -1,16 +1,51 @@
-- name: Clone NG-GL4ES
-  run: |
-    git clone --recursive https://github.com/BZLZHH/NG-GL4ES.git
+name: Android CI
 
-- name: Build arm64
-  run: |
-    cd NG-GL4ES
-    mkdir build
-    cd build
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
-    cmake .. \
-      -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-      -DANDROID_ABI=arm64-v8a \
-      -DANDROID_PLATFORM=android-24
+jobs:
+  build:
+    name: Build Android
+    runs-on: ubuntu-latest
 
-    make -j$(nproc)
+    env:
+      ANDROID_SDK_ROOT: ${{ runner.tool_cache }}/android-sdk
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Install Android SDK Tools
+      run: |
+        sudo mkdir -p $ANDROID_SDK_ROOT
+        sudo chown -R $USER $ANDROID_SDK_ROOT
+        sdkmanager --install "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+
+    - name: Set up Android NDK
+      run: |
+        sdkmanager "ndk-bundle"
+
+    - name: Build with CMake
+      run: |
+        mkdir -p build && cd build
+        cmake .. \
+          -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk-bundle/build/cmake/android.toolchain.cmake \
+          -DANDROID_ABI=armeabi-v7a \
+          -DANDROID_PLATFORM=android-21 \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build .
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: android-build
+        path: build/
