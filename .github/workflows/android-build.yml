@@ -1,46 +1,16 @@
-name: Build NG-GL4ES Android
+- name: Clone NG-GL4ES
+  run: |
+    git clone --recursive https://github.com/BZLZHH/NG-GL4ES.git
 
-on:
-  workflow_dispatch:
-  push:
+- name: Build arm64
+  run: |
+    cd NG-GL4ES
+    mkdir build
+    cd build
 
-jobs:
-  build:
-    runs-on: ubuntu-22.04
+    cmake .. \
+      -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+      -DANDROID_ABI=arm64-v8a \
+      -DANDROID_PLATFORM=android-24
 
-    steps:
-      - name: Checkout (this repo)
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y cmake ninja-build git unzip wget
-
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r26d
-
-      - name: Clone NG-GL4ES
-        run: |
-          git clone https://github.com/BZLZHH/NG-GL4ES.git
-          
-      - name: Build arm64
-        run: |
-          cd NG-GL4ES
-          mkdir build
-          cd build
-          
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-24
-          
-          make -j$(nproc)
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: libGL-arm64
-          path: NG-GL4ES/build/libGL.so
+    make -j$(nproc)
